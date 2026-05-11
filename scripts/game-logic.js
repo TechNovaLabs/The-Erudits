@@ -97,9 +97,12 @@ async function checkVotes(roomId, votes) {
         const winners = Object.keys(counts).filter(cat => counts[cat] === maxVotes);
         const finalWinner = winners[Math.floor(Math.random() * winners.length)];
 
+        // Сначала готовим "чистое" состояние раунда
         await set(ref(database, `rooms/${roomId}/votes/category`), null);
-        await set(ref(database, `rooms/${roomId}/info/currentQuestionIndexes`), null); // Очищаем старые индексы
+        await set(ref(database, `rooms/${roomId}/info/currentQuestionIndexes`), null); 
         await set(ref(database, `rooms/${roomId}/info/selectedCategory`), finalWinner);
+        
+        // Переводим всех в игру только после подготовки данных категории
         await set(ref(database, `rooms/${roomId}/info/gameState`), "playing");
     }
 }
@@ -107,12 +110,14 @@ async function checkVotes(roomId, votes) {
 async function syncAndStartBlock(roomId, myNickname, isAdmin) {
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById('game-screen').classList.remove('hidden');
-    document.getElementById('question-text').textContent = "Загрузка вопросов...";
+    document.getElementById('question-text').textContent = "Синхронизация вопросов...";
+    document.getElementById('answers-grid').innerHTML = ""; // Очищаем старые кнопки сразу
     
     const snapshot = await get(ref(database, `rooms/${roomId}/info/selectedCategory`));
     const category = snapshot.val();
 
     if (isAdmin) {
+        // Админ готовит индексы ПЕРЕД тем, как игроки начнут их слушать
         const allIndexes = Array.from(Array(questionsData[category].length).keys());
         const chosenIndexes = shuffle(allIndexes).slice(0, 30);
         
@@ -125,20 +130,25 @@ async function syncAndStartBlock(roomId, myNickname, isAdmin) {
         await set(ref(database, `rooms/${roomId}/info/currentQuestionIndexes`), chosenIndexes);
     }
 
-    // Слушаем индексы. Как только они появятся в базе — начинаем игру
+    // Слушаем индексы. Теперь используем постоянный слушатель, который сам "отпишется" при получении данных.
     const indexesRef = ref(database, `rooms/${roomId}/info/currentQuestionIndexes`);
-    onValue(indexesRef, (snap) => {
+    const unsubscribe = onValue(indexesRef, (snap) => {
         const indexes = snap.val();
-        if (indexes && indexes.length > 0) {
+        // Начинаем только если пришел непустой массив
+        if (indexes && Array.isArray(indexes) && indexes.length > 0) {
+            unsubscribe(); // Важно: отписываемся, чтобы не перезапускать блок случайно
+            
             shuffledQuestions = indexes.map(idx => questionsData[category][idx]);
             currentQuestionIndex = 0;
             userScoreInBlock = 0;
             currentBlockNumber++; 
+            
             document.getElementById('category-name-display').textContent = `${category}`;
             document.getElementById('current-block-val').textContent = currentBlockNumber;
+            
             loadQuestion(category, roomId, myNickname);
         }
-    }, { onlyOnce: true });
+    });
 }
 
 function loadQuestion(category, roomId, myNickname) {
@@ -152,6 +162,8 @@ function loadQuestion(category, roomId, myNickname) {
     }
 
     const qData = shuffledQuestions[currentQuestionIndex];
+    if (!qData) return;
+
     document.getElementById('question-text').textContent = qData.q;
     document.getElementById('question-counter').textContent = `Вопрос ${currentQuestionIndex + 1}/${shuffledQuestions.length}`;
     
@@ -163,15 +175,18 @@ function loadQuestion(category, roomId, myNickname) {
 
     answers.forEach((ans) => {
         const btn = document.createElement('button');
+        btn.className = "answer-btn";
         btn.textContent = ans.text;
         btn.onclick = () => {
             clearInterval(timerInterval);
+            const allBtns = grid.querySelectorAll('button');
+            
             if (ans.isCorrect) {
                 totalGameScore += 10;
                 userScoreInBlock += 10;
                 document.getElementById('my-score-val').textContent = totalGameScore;
             }
-            const allBtns = grid.querySelectorAll('button');
+            
             allBtns.forEach((b, idx) => {
                 b.disabled = true;
                 if (answers[idx].isCorrect) {
@@ -179,10 +194,12 @@ function loadQuestion(category, roomId, myNickname) {
                     b.style.color = "white";
                 }
             });
+            
             if (!ans.isCorrect) {
                 btn.style.background = "var(--error)";
                 btn.style.color = "white";
             }
+            
             setTimeout(() => {
                 currentQuestionIndex++;
                 loadQuestion(category, roomId, myNickname);
@@ -223,7 +240,7 @@ async function finishBlock(roomId, myNickname) {
     const isAdmin = roomData.players[myKey].role === "admin";
 
     if (currentBlockNumber >= blocksToWin) {
-        showModal("Вы закончили!", `Ваш счет: ${totalGameScore}. Ожидаем завершения остальных игроков...`, "Ждать");
+        showModal("Вы закончили!", `Ваш счет: ${totalGameScore}. Ожидаем завершения остальных...`, "Ждать");
         
         if (isAdmin) {
             onValue(ref(database, `rooms/${roomId}/players`), (snapshot) => {
