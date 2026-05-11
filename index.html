@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/styles.css">
+    <title>The Erudits | Premium</title>
+</head>
+
+<body>
+    <div id="app">
+        <section id="welcome-screen" class="screen">
+            <h1>The Erudits</h1>
+            <div class="menu-buttons">
+                <button id="btn-create">Создать игру</button>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 10px 0;">
+                <input type="text" id="join-id-input" placeholder="ID комнаты (8 знаков)">
+                <button id="btn-join">Присоединиться</button>
+            </div>
+        </section>
+
+        <section id="settings-screen" class="screen hidden">
+            <h2>Настройки</h2>
+            <div class="input-group">
+                <input type="text" id="user-nickname" placeholder="Ваш ник">
+                <input type="text" id="room-name" placeholder="Название комнаты">
+                <label>Игроков: <input type="number" id="players-count" value="10" min="1"></label>
+                <label>Блоков: <input type="number" id="blocks-to-win" value="3" min="1"></label>
+            </div>
+            <div class="room-id-display">
+                ID комнаты: <span id="generated-id">--------</span>
+            </div>
+            <button id="btn-start-lobby">Открыть комнату</button>
+            <button onclick="location.reload()" class="btn-secondary">Назад</button>
+        </section>
+
+        <section id="lobby-screen" class="screen hidden">
+            <h2 id="lobby-room-name">Комната</h2>
+            <div class="room-info">ID: <span id="lobby-id-display">--------</span></div>
+            <div class="players-container">
+                <h3>В сети:</h3>
+                <ul id="players-list"></ul>
+            </div>
+            <p id="waiting-status">Ожидание игроков...</p>
+            <button id="btn-start-game" class="hidden btn-success">Начать игру</button>
+        </section>
+
+        <section id="voting-screen" class="screen hidden">
+            <h2>Категория</h2>
+            <div id="categories-grid" class="categories-grid"></div>
+            <div id="vote-status" class="vote-status hidden">Ожидание других игроков...</div>
+        </section>
+
+        <section id="game-screen" class="screen hidden">
+            <div class="game-header">
+                <span id="category-name-display">Загрузка...</span>
+                <div id="timer-circle">20</div>
+            </div>
+            <div id="question-counter">Вопрос 1</div>
+            <div class="question-box">
+                <h3 id="question-text">Текст вопроса</h3>
+            </div>
+            <div id="answers-grid" class="menu-buttons"></div>
+            <div class="game-footer">
+                <div class="stat-item">Счёт: <span id="my-score-val">0</span></div>
+                <div class="stat-item">Блок: <span id="current-block-val">1</span></div>
+            </div>
+        </section>
+
+        <div id="custom-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2 id="modal-title">Готово</h2>
+                <p id="modal-message"></p>
+                <button id="modal-btn">Далее</button>
+            </div>
+        </div>
+    </div>
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="modal-title">Заголовок</h2>
+            <p id="modal-message">Сообщение</p>
+            <button id="modal-btn">Ок</button>
+        </div>
+    </div>
+    <div id="nickname-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Ваше имя</h2>
+            <p>Введите никнейм для входа в игру</p>
+            <input type="text" id="modal-nickname-input" placeholder="Никнейм..." maxlength="15">
+            <button id="modal-nickname-confirm" style="width: 100%; margin-top: 10px;">Войти в комнату</button>
+            <button id="modal-nickname-cancel" class="btn-secondary"
+                style="width: 100%; background: #64748b; margin-top: 5px;">Отмена</button>
+        </div>
+    </div>
+    <script type="module" src="scripts/scripts.js"></script>
+</body>
+
+</html>
